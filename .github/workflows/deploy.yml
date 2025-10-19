@@ -1,0 +1,28 @@
+name: Terraform Plan & Validate
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Initialize Terraform
+        run: terraform init -input=false
+
+      - name: Validate Terraform files
+        run: terraform validate
+
+      - name: Check formatting
+        run: terraform fmt -check
+
+      - name: Plan (dry-run)
+        run: terraform plan -no-color -input=false
