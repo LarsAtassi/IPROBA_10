@@ -10,4 +10,53 @@
   <p>Diese Seite wurde automatisch über GitHub & Vercel deployed.</p>
   <p><strong>Status:</strong> Erfolgreich online!</p>
 </body>
+  <script>
+(function () {
+  // --- Detect environment from hostname (works for Cloudflare Pages & custom subdomains) ---
+  const host = location.hostname.toLowerCase();
+
+  /** Map host -> environment name */
+  function detectEnv(h) {
+    if (h.startsWith('development.') || h.includes('.development.')) return 'development';
+    if (h.startsWith('dev.')         || h.includes('.dev.'))         return 'development';
+    if (h.startsWith('test.')        || h.includes('.test.'))        return 'test';
+    if (h.startsWith('staging.')     || h.includes('.staging.'))     return 'staging';
+    // For pages.dev branch aliases like <branch>.<project>.pages.dev
+    if (/^development\./.test(h)) return 'development';
+    if (/^test\./.test(h))        return 'test';
+    if (/^staging\./.test(h))     return 'staging';
+    return 'production';
+  }
+
+  const ENV = detectEnv(host);
+
+  // Expose to the rest of the app (if you need it)
+  window.APP_ENV = {
+    name: ENV,
+    isProd: ENV === 'production',
+    isStaging: ENV === 'staging',
+    isTest: ENV === 'test',
+    isDev: ENV === 'development'
+  };
+
+  // Optional: choose an API base (edit to your needs)
+  window.APP_CONFIG = {
+    apiBase:
+      ENV === 'production'  ? 'https://api.example.com' :
+      ENV === 'staging'     ? 'https://api.staging.example.com' :
+      ENV === 'test'        ? 'https://api.test.example.com' :
+                              'https://api.dev.example.com'
+  };
+
+  // --- Inject ribbon ---
+  const banner = document.createElement('div');
+  banner.className = 'env-ribbon ' + (
+    ENV === 'production'  ? 'env-prod' :
+    ENV === 'staging'     ? 'env-stg'  :
+    ENV === 'test'        ? 'env-test' : 'env-dev'
+  );
+  banner.textContent = ENV.toUpperCase();
+  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(banner));
+})();
+</script>
 </html>
