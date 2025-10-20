@@ -61,6 +61,37 @@
     .success{background:#ecfdf5;border:1px solid #10b981;color:#065f46;padding:10px 12px;border-radius:10px;margin-top:10px;display:none}
     .error{background:#fef2f2;border:1px solid #ef4444;color:#7f1d1d;padding:10px 12px;border-radius:10px;margin-top:10px;display:none}
   </style>
+  <script>
+  (function () {
+    const host = location.hostname.toLowerCase();
+    function detectEnv(h) {
+      // Custom subdomains (optional)
+      if (h.startsWith('dev.')      || h.includes('.dev.'))      return 'development';
+      if (h.startsWith('test.')     || h.includes('.test.'))     return 'test';
+      if (h.startsWith('staging.')  || h.includes('.staging.'))  return 'staging';
+      // Cloudflare Pages branch aliases: <branch>.<project>.pages.dev
+      if (h.startsWith('development.')) return 'development';
+      if (h.startsWith('test.'))        return 'test';
+      if (h.startsWith('staging.'))     return 'staging';
+      return 'production';
+    }
+    const env = detectEnv(host);
+
+    // expose if you need it elsewhere
+    window.APP_ENV = { name: env, isProd: env==='production', isStaging: env==='staging', isTest: env==='test', isDev: env==='development' };
+
+    // render the label (hide on prod)
+    const pill = document.getElementById('envPill');
+    if (pill) {
+      if (env === 'production') {
+        pill.hidden = true;
+      } else {
+        pill.textContent = env.toUpperCase();
+        pill.hidden = false;
+      }
+    }
+  })();
+</script>
 </head>
 <body>
 
