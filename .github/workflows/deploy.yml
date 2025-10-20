@@ -23,6 +23,6 @@ jobs:
 
       - name: Check formatting
         run: terraform fmt -check
-
-      - name: Plan (dry-run)
-        run: terraform plan -no-color -input=false
+# removed for demo purposes
+#      - name: Plan (dry-run)
+#       run: terraform plan -no-color -input=false
