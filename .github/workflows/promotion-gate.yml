@@ -1,0 +1,82 @@
+name: Promotion order gate
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+    branches:
+      - main
+      - staging
+      - test
+      - testing   # keep if your branch is named "testing" instead of "test"
+
+jobs:
+  enforce-promotion:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write   # to leave a friendly comment
+      contents: read
+    steps:
+      - name: Check PR source/target branches
+        id: check
+        run: |
+          BASE="${{ github.event.pull_request.base.ref }}"
+          HEAD="${{ github.event.pull_request.head.ref }}"
+
+          echo "Base: $BASE"
+          echo "Head: $HEAD"
+
+          # Define allowed source branches per target (base) branch
+          case "$BASE" in
+            test|testing)
+              ALLOWED_FROM=("development")
+              ;;
+            staging)
+              ALLOWED_FROM=("test" "testing")
+              ;;
+            main)
+              ALLOWED_FROM=("staging")
+              ;;
+            *)
+              echo "Base branch $BASE is not governed by this policy. Passing."
+              exit 0
+              ;;
+          esac
+
+          # Allow same-branch PRs to catch mistakes explicitly
+          if [ "$HEAD" = "$BASE" ]; then
+            echo "Head equals base ($HEAD) — likely an accidental PR. Failing."
+            echo "allowed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Check if HEAD is in the allowed list
+          for B in "${ALLOWED_FROM[@]}"; do
+            if [ "$HEAD" = "$B" ]; then
+              echo "allowed=true" >> $GITHUB_OUTPUT
+              echo "Promotion allowed: $HEAD → $BASE"
+              exit 0
+            fi
+          done
+
+          echo "allowed=false" >> $GITHUB_OUTPUT
+          echo "❌ Disallowed promotion path: $HEAD → $BASE"
+          echo "Allowed paths:"
+          echo "  - development → test/testing"
+          echo "  - test/testing → staging"
+          echo "  - staging → main"
+          exit 1
+
+      - name: Comment when blocked
+        if: steps.check.outputs.allowed == 'false'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            🚫 This PR violates the promotion order.
+
+            **Requested:** `${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}`
+            **Allowed paths:**
+            - `development → test` (or `testing`)
+            - `test/testing → staging`
+            - `staging → main`
+
+            Please retarget your PR accordingly.
