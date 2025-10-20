@@ -2,12 +2,405 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FoodNow Demo</title>
+
+  <!-- your environment banner files (already in your repo) -->
+  <link rel="stylesheet" href="env.css" />
+  <script src="env.js"></script>
+
+  <style>
+    :root{
+      --bg:#fafafa; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+      --accent:#2563eb; --accent-ink:#fff; --ok:#16a34a; --warn:#b45309;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:var(--accent);text-decoration:none}
+    header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);z-index:20}
+    .wrap{max-width:1100px;margin:auto;padding:12px 16px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand .logo{font-size:22px}
+    .brand h1{font-size:18px;margin:0}
+    .env-pill{font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+    .promo{background:#fef3c7;border:1px dashed #f59e0b;color:#92400e;border-radius:10px;padding:8px 10px;display:inline-flex;gap:8px;align-items:center}
+
+    .container{max-width:1100px;margin:20px auto;display:grid;gap:16px;padding:0 16px;grid-template-columns:1.5fr 1fr}
+    @media (max-width:960px){.container{grid-template-columns:1fr}}
+
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.03)}
+    .card > .section{padding:14px}
+    h2{font-size:18px;margin:0 0 6px}
+    .muted{color:var(--muted)}
+    .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+    .item{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .item .img{font-size:34px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .price{font-weight:600}
+    .btn{cursor:pointer;background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:8px 10px;font-weight:600}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn.secondary{background:#f3f4f6;color:#111827;border:1px solid var(--line)}
+    .qty{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+    .qty button{background:#f9fafb;border:0;padding:6px 10px;cursor:pointer}
+    .qty span{min-width:28px;text-align:center;padding:0 8px}
+
+    .cart-empty{padding:10px 0;color:var(--muted)}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+    tfoot td{border-top:1px solid var(--line);font-weight:600}
+    .totals{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-top:10px}
+    .badge{font-size:12px;padding:2px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+
+    .checkout-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:720px){.checkout-grid{grid-template-columns:1fr}}
+    .field{display:flex;flex-direction:column;gap:6px}
+    input,select,textarea{padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+
+    .footer{max-width:1100px;margin:14px auto 30px;color:var(--muted);padding:0 16px}
+    .success{background:#ecfdf5;border:1px solid #10b981;color:#065f46;padding:10px 12px;border-radius:10px;margin-top:10px;display:none}
+    .error{background:#fef2f2;border:1px solid #ef4444;color:#7f1d1d;padding:10px 12px;border-radius:10px;margin-top:10px;display:none}
+  </style>
+  <script>
+  (function () {
+    const host = location.hostname.toLowerCase();
+    function detectEnv(h) {
+      // Custom subdomains (optional)
+      if (h.startsWith('dev.')      || h.includes('.dev.'))      return 'development';
+      if (h.startsWith('test.')     || h.includes('.test.'))     return 'test';
+      if (h.startsWith('staging.')  || h.includes('.staging.'))  return 'staging';
+      // Cloudflare Pages branch aliases: <branch>.<project>.pages.dev
+      if (h.startsWith('development.')) return 'development';
+      if (h.startsWith('test.'))        return 'test';
+      if (h.startsWith('staging.'))     return 'staging';
+      return 'production';
+    }
+    const env = detectEnv(host);
+
+    // expose if you need it elsewhere
+    window.APP_ENV = { name: env, isProd: env==='production', isStaging: env==='staging', isTest: env==='test', isDev: env==='development' };
+
+    // render the label (hide on prod)
+    const pill = document.getElementById('envPill');
+    if (pill) {
+      if (env === 'production') {
+        pill.hidden = true;
+      } else {
+        pill.textContent = env.toUpperCase();
+        pill.hidden = false;
+      }
+    }
+  })();
+</script>
 </head>
-<body style="font-family: Arial; text-align: center; margin-top: 100px;">
-  <h1>🚀 Willkommen bei FodNow 50 % off</h1>
-  <p>Diese Seite wurde automatisch über GitHub & Vercel deployed.</p>
-  <p><strong>Status:</strong> Erfolgreich online!</p>
+<body>
+
+  <header>
+    <div class="wrap topbar">
+      <div class="brand">
+        <div class="logo">🍔</div>
+        <div>
+          <h1>FoodNow Demo - Beta 1.0</h1>
+          <div class="muted" style="font-size:13px">Schnell. Frisch. Lokal.</div>
+        </div>
+      </div>
+      <div class="promo">
+        <span>🚀</span><strong>Willkommen! 50 % Rabatt</strong><span class="muted">heute automatisch angewendet</span>
+      </div>
+      <div class="env-pill" id="envPill">Umgebung: wird ermittelt…</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- MENU -->
+    <section class="card">
+      <div class="section">
+        <h2>Menü</h2>
+        <div class="muted">Wähle deine Lieblingsgerichte und füge sie dem Warenkorb hinzu.</div>
+      </div>
+      <div class="section">
+        <div class="menu-grid" id="menu">
+          <!-- Items injected by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- CART + CHECKOUT -->
+    <aside class="card">
+      <div class="section">
+        <h2>Warenkorb</h2>
+        <div id="cartEmpty" class="cart-empty">Dein Warenkorb ist leer.</div>
+        <div style="overflow:auto">
+          <table id="cartTable" style="display:none">
+            <thead>
+              <tr><th>Artikel</th><th>Menge</th><th style="text-align:right">Summe</th><th></th></tr>
+            </thead>
+            <tbody id="cartBody"></tbody>
+          </table>
+        </div>
+
+        <div class="totals">
+          <span>Zwischensumme</span><span id="subTotal">–</span>
+          <span class="row" style="gap:8px">Rabatt <span class="badge">50 %</span></span><span id="discount">–</span>
+          <span>Zwischenbetrag</span><span id="afterDiscount">–</span>
+          <span>inkl. MwSt. (7.7 %)</span><span id="vat">–</span>
+          <span><strong>Gesamt</strong></span><span id="grandTotal"><strong>–</strong></span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Checkout</h2>
+        <div class="checkout-grid">
+          <div class="field">
+            <label for="mode">Art</label>
+            <select id="mode">
+              <option value="pickup">Abholung</option>
+              <option value="delivery">Lieferung</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="time">Wunschzeit</label>
+            <select id="time">
+              <option>sofort</option>
+              <option>+15 Min</option>
+              <option>+30 Min</option>
+              <option>+45 Min</option>
+            </select>
+          </div>
+
+          <div class="field address only-delivery" style="display:none">
+            <label for="street">Straße & Nr.</label>
+            <input id="street" placeholder="Musterstrasse 1" />
+          </div>
+          <div class="field address only-delivery" style="display:none">
+            <label for="zip">PLZ / Ort</label>
+            <input id="zip" placeholder="6000 Luzern" />
+          </div>
+
+          <div class="field">
+            <label for="name">Name</label>
+            <input id="name" placeholder="Max Muster" />
+          </div>
+          <div class="field">
+            <label for="phone">Telefon</label>
+            <input id="phone" placeholder="+41 79 123 45 67" />
+          </div>
+
+          <div class="field" style="grid-column:1/-1">
+            <label for="note">Hinweis (optional)</label>
+            <textarea id="note" rows="2" placeholder="Allergien, Klingeln bei Nachbar, …"></textarea>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;gap:8px">
+          <button class="btn secondary" id="clearCart" disabled>Leeren</button>
+          <button class="btn" id="placeOrder" disabled>Bestellung aufgeben</button>
+        </div>
+
+        <div id="ok" class="success">✅ Danke! Deine Bestellung ist eingegangen. Wir senden eine Bestätigung per SMS.</div>
+        <div id="err" class="error">⚠️ Bitte fülle alle erforderlichen Felder aus und lege Artikel in den Warenkorb.</div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="footer wrap">
+    <small>Diese Seite wurde automatisch über GitHub &amp; Cloudflare Pages für jede Umgebung (development / test / staging / production) bereitgestellt.</small>
+  </div>
+
+  <script>
+    // ---------- Environment pill (uses your env.js if present) ----------
+    const envName = (window.APP_ENV && window.APP_ENV.name) || 'production';
+    document.getElementById('envPill').textContent = 'Umgebung: ' + envName.toUpperCase();
+
+    // ---------- Demo menu ----------
+    const MENU = [
+      { id:'m1', name:'Margherita', desc:'Tomaten, Mozzarella, Basilikum', price: 14.50, emoji:'🍕' },
+      { id:'m2', name:'BBQ Chicken', desc:'Poulet, BBQ-Sauce, Zwiebeln', price: 19.90, emoji:'🍗' },
+      { id:'m3', name:'Veggie Bowl', desc:'Quinoa, Avocado, Gemüse', price: 16.80, emoji:'🥗' },
+      { id:'m4', name:'Burger Classic', desc:'Rindfleisch, Cheddar, Sauce', price: 17.50, emoji:'🍔' },
+      { id:'m5', name:'Pommes', desc:'Knusprig & goldgelb', price: 5.90, emoji:'🍟' },
+      { id:'m6', name:'Tiramisu', desc:'Hausgemacht', price: 6.50, emoji:'🍰' },
+      { id:'m7', name:'Cola 0.5l', desc:'Gekühlt', price: 3.80, emoji:'🥤' },
+      { id:'m8', name:'Wasser 0.5l', desc:'Still', price: 2.90, emoji:'💧' },
+    ];
+
+    // ---------- State ----------
+    const cart = new Map(); // id -> {item, qty}
+    const VAT = 0.077;
+    const DISCOUNT = 0.50; // 50% off demo
+
+    // ---------- Render menu ----------
+    const menuEl = document.getElementById('menu');
+    MENU.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'item';
+      card.innerHTML = `
+        <div class="row"><div class="img">${item.emoji}</div><div class="price">${fmt(item.price)}</div></div>
+        <div class="row" style="justify-content:flex-start; gap:8px">
+          <strong>${item.name}</strong>
+        </div>
+        <div class="muted" style="min-height:36px">${item.desc}</div>
+        <div class="row">
+          <div class="qty">
+            <button aria-label="minus" data-act="minus">−</button>
+            <span data-role="qty">1</span>
+            <button aria-label="plus" data-act="plus">+</button>
+          </div>
+          <button class="btn" data-act="add">In den Warenkorb</button>
+        </div>
+      `;
+      let qty = 1;
+      const qtySpan = card.querySelector('[data-role="qty"]');
+      card.addEventListener('click', (e) => {
+        if (!(e.target instanceof HTMLElement)) return;
+        const act = e.target.getAttribute('data-act');
+        if (act === 'plus'){ qty = Math.min(99, qty+1); qtySpan.textContent = qty; }
+        if (act === 'minus'){ qty = Math.max(1, qty-1); qtySpan.textContent = qty; }
+        if (act === 'add'){ addToCart(item, qty); qty = 1; qtySpan.textContent = qty; }
+      });
+      menuEl.appendChild(card);
+    });
+
+    // ---------- Cart rendering ----------
+    const cartBody = document.getElementById('cartBody');
+    const cartTable = document.getElementById('cartTable');
+    const cartEmpty = document.getElementById('cartEmpty');
+    const clearBtn = document.getElementById('clearCart');
+    const placeBtn = document.getElementById('placeOrder');
+
+    function addToCart(item, qty){
+      const row = cart.get(item.id) || { item, qty:0 };
+      row.qty += qty;
+      cart.set(item.id, row);
+      renderCart();
+    }
+    function removeFromCart(id){
+      cart.delete(id);
+      renderCart();
+    }
+    function changeQty(id, delta){
+      const row = cart.get(id);
+      if (!row) return;
+      row.qty = Math.max(1, row.qty + delta);
+      cart.set(id, row);
+      renderCart();
+    }
+
+    function renderCart(){
+      cartBody.innerHTML = '';
+      if (cart.size === 0){
+        cartTable.style.display = 'none';
+        cartEmpty.style.display = 'block';
+        clearBtn.disabled = true;
+        placeBtn.disabled = true;
+      } else {
+        cartTable.style.display = '';
+        cartEmpty.style.display = 'none';
+        clearBtn.disabled = false;
+        placeBtn.disabled = false;
+      }
+
+      [...cart.values()].forEach(({item, qty}) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.name}<div class="muted" style="font-size:12px">${item.desc}</div></td>
+          <td>
+            <div class="qty">
+              <button aria-label="minus" data-id="${item.id}" data-d="-1">−</button>
+              <span style="min-width:28px;display:inline-block;text-align:center">${qty}</span>
+              <button aria-label="plus" data-id="${item.id}" data-d="1">+</button>
+            </div>
+          </td>
+          <td style="text-align:right">${fmt(item.price * qty)}</td>
+          <td><button class="btn secondary" data-remove="${item.id}">Entfernen</button></td>
+        `;
+        cartBody.appendChild(tr);
+      });
+
+      cartBody.querySelectorAll('[data-d]').forEach(btn => {
+        btn.addEventListener('click', () => changeQty(btn.dataset.id, parseInt(btn.dataset.d, 10)));
+      });
+      cartBody.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', () => removeFromCart(btn.dataset.remove));
+      });
+
+      updateTotals();
+    }
+
+    // ---------- Totals ----------
+    const elSub = document.getElementById('subTotal');
+    const elDis = document.getElementById('discount');
+    const elAfter = document.getElementById('afterDiscount');
+    const elVat = document.getElementById('vat');
+    const elGrand = document.getElementById('grandTotal');
+
+    function calc(){
+      const subtotal = [...cart.values()].reduce((s,{item,qty}) => s + item.price*qty, 0);
+      const discount = subtotal * DISCOUNT;
+      const after = Math.max(0, subtotal - discount);
+      const vat = after * VAT;
+      const total = after; // VAT is included in CH pricing typically; keep separate display though
+      return {subtotal, discount, after, vat, total};
+    }
+    function updateTotals(){
+      const {subtotal, discount, after, vat, total} = calc();
+      elSub.textContent = fmt(subtotal);
+      elDis.textContent = '− ' + fmt(discount);
+      elAfter.textContent = fmt(after);
+      elVat.textContent = fmt(vat);
+      elGrand.innerHTML = '<strong>' + fmt(total) + '</strong>';
+    }
+
+    // ---------- Checkout ----------
+    const modeSel = document.getElementById('mode');
+    const deliveryFields = document.querySelectorAll('.only-delivery');
+    modeSel.addEventListener('change', () => {
+      const isDel = modeSel.value === 'delivery';
+      deliveryFields.forEach(f => f.style.display = isDel ? '' : 'none');
+    });
+
+    clearBtn.addEventListener('click', () => { cart.clear(); renderCart(); hideMsg(); });
+    placeBtn.addEventListener('click', onPlace);
+
+    function onPlace(){
+      hideMsg();
+      if (cart.size === 0){ return showErr('Lege Artikel in den Warenkorb.'); }
+      // Basic validation
+      const needDelivery = modeSel.value === 'delivery';
+      const required = ['name','phone'].concat(needDelivery ? ['street','zip'] : []);
+      for (const id of required){
+        const el = document.getElementById(id);
+        if (!el || !el.value.trim()){ el && el.focus(); return showErr('Bitte alle Pflichtfelder ausfüllen.'); }
+      }
+      // "Submit"
+      const summary = {
+        env: envName,
+        mode: modeSel.value,
+        items: [...cart.values()].map(({item,qty})=>({id:item.id, name:item.name, qty, price:item.price})),
+        totals: calc(),
+        when: document.getElementById('time').value,
+        name: document.getElementById('name').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        street: (document.getElementById('street')||{}).value || '',
+        zip: (document.getElementById('zip')||{}).value || '',
+        note: document.getElementById('note').value.trim()
+      };
+      console.log('ORDER', summary); // replace with real POST if needed
+      showOk('✅ Bestellung eingegangen! (' + summary.env + ')');
+      cart.clear(); renderCart();
+      // reset form (keep mode)
+      document.querySelectorAll('input, textarea').forEach(el => { if (['street','zip','name','phone','note'].includes(el.id)) el.value=''; });
+    }
+
+    function showOk(msg){ const el = document.getElementById('ok'); el.textContent = msg; el.style.display='block'; }
+    function showErr(msg){ const el = document.getElementById('err'); el.textContent = '⚠️ ' + msg; el.style.display='block'; }
+    function hideMsg(){ document.getElementById('ok').style.display='none'; document.getElementById('err').style.display='none'; }
+
+    // ---------- Utils ----------
+    function fmt(n){ return new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'}).format(n); }
+
+    // Initial
+    renderCart();
+  </script>
 </body>
 </html>
