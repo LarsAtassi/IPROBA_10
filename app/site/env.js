@@ -1,24 +1,28 @@
 <script>
 (function () {
-  // --- Detect environment from hostname (works for Cloudflare Pages & custom subdomains) ---
-  const host = location.hostname.toLowerCase();
+  // Detect env strictly from hostname. Works for:
+  //   <branch>.<project>.pages.dev
+  //   dev|test|staging.your-domain.tld
+  const h = location.hostname.toLowerCase();
 
-  /** Map host -> environment name */
-  function detectEnv(h) {
-    if (h.startsWith('development.') || h.includes('.development.')) return 'development';
-    if (h.startsWith('dev.')         || h.includes('.dev.'))         return 'development';
-    if (h.startsWith('test.')        || h.includes('.test.'))        return 'test';
-    if (h.startsWith('staging.')     || h.includes('.staging.'))     return 'staging';
-    // For pages.dev branch aliases like <branch>.<project>.pages.dev
-    if (/^development\./.test(h)) return 'development';
-    if (/^test\./.test(h))        return 'test';
-    if (/^staging\./.test(h))     return 'staging';
-    return 'production';
+  // Returns: 'development' | 'test' | 'staging' | 'production'
+  function detectEnv(host) {
+    // custom subdomains
+    if (host.startsWith('dev.') || host.includes('.dev.')) return 'development';
+    if (host.startsWith('test.') || host.includes('.test.')) return 'test';
+    if (host.startsWith('staging.') || host.includes('.staging.')) return 'staging';
+
+    // Cloudflare Pages branch aliases: <branch>.<project>.pages.dev
+    if (host.startsWith('development.')) return 'development';
+    if (host.startsWith('test.'))        return 'test';
+    if (host.startsWith('staging.'))     return 'staging';
+
+    return 'production'; // anything else is prod
   }
 
-  const ENV = detectEnv(host);
+  const ENV = detectEnv(h);
 
-  // Expose to the rest of the app (if you need it)
+  // Expose globally if you need it elsewhere
   window.APP_ENV = {
     name: ENV,
     isProd: ENV === 'production',
@@ -27,23 +31,16 @@
     isDev: ENV === 'development'
   };
 
-  // Optional: choose an API base (edit to your needs)
-  window.APP_CONFIG = {
-    apiBase:
-      ENV === 'production'  ? 'https://api.example.com' :
-      ENV === 'staging'     ? 'https://api.staging.example.com' :
-      ENV === 'test'        ? 'https://api.test.example.com' :
-                              'https://api.dev.example.com'
-  };
-
-  // --- Inject ribbon ---
-  const banner = document.createElement('div');
-  banner.className = 'env-ribbon ' + (
-    ENV === 'production'  ? 'env-prod' :
-    ENV === 'staging'     ? 'env-stg'  :
-    ENV === 'test'        ? 'env-test' : 'env-dev'
-  );
-  banner.textContent = ENV.toUpperCase();
-  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(banner));
+  // If there is an #envPill element, set/hide it accordingly
+  document.addEventListener('DOMContentLoaded', () => {
+    const pill = document.getElementById('envPill');
+    if (!pill) return;
+    if (ENV === 'production') {
+      pill.style.display = 'none';            // hide on prod
+    } else {
+      pill.textContent = ENV.toUpperCase();   // show exact branch env
+      pill.style.display = '';
+    }
+  });
 })();
 </script>
