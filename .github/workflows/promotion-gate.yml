@@ -7,17 +7,19 @@ on:
       - main
       - staging
       - test
-      - testing   # keep if your branch is named "testing" instead of "test"
+      - testing
+      - development
 
 jobs:
   enforce-promotion:
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write   # to leave a friendly comment
+      pull-requests: write
       contents: read
     steps:
       - name: Check PR source/target branches
         id: check
+        shell: bash
         run: |
           BASE="${{ github.event.pull_request.base.ref }}"
           HEAD="${{ github.event.pull_request.head.ref }}"
@@ -25,46 +27,82 @@ jobs:
           echo "Base: $BASE"
           echo "Head: $HEAD"
 
-          # Define allowed source branches per target (base) branch
+          # Helper: is HEAD in list?
+          in_list () {
+            local x="$1"; shift
+            for v in "$@"; do [[ "$v" == "$x" ]] && return 0; done
+            return 1
+          }
+
+          # Helper: does HEAD match any prefix?
+          has_prefix () {
+            local x="$1"; shift
+            for p in "$@"; do [[ "$x" == "$p"* ]] && return 0; done
+            return 1
+          }
+
+          PROTECTED=("main" "staging" "test" "testing" "development")
+          FEATURE_PREFIXES=("feature/" "bugfix/" "hotfix/" "fix/" "chore/" "refactor/" "feat/" "task/" "dependabot/")
+
+          # Default: pass unless we set allowed=false explicitly
+          allowed="true"
+
           case "$BASE" in
+            development)
+              # Allow feature branches into development.
+              # Disallow merges FROM other protected branches into development to avoid churn.
+              if in_list "$HEAD" "${PROTECTED[@]}"; then
+                # Same-branch PR is a mistake; protected->development merges are not allowed
+                allowed="false"
+                reason="Only feature branches may target 'development'."
+              elif has_prefix "$HEAD" "${FEATURE_PREFIXES[@]}"; then
+                allowed="true"
+              else
+                # If you want to be looser, set allowed=true here.
+                # For now we require a known feature prefix to keep things tidy.
+                allowed="false"
+                reason="Branch '$HEAD' does not use an allowed feature prefix (${FEATURE_PREFIXES[*]})."
+              fi
+              ;;
+
             test|testing)
-              ALLOWED_FROM=("development")
+              # Only development -> test
+              if [[ "$HEAD" != "development" ]]; then
+                allowed="false"; reason="Only 'development' → '$BASE' is allowed."
+              fi
               ;;
+
             staging)
-              ALLOWED_FROM=("test" "testing")
+              # Only test/testing -> staging
+              if [[ "$HEAD" != "test" && "$HEAD" != "testing" ]]; then
+                allowed="false"; reason="Only 'test/testing' → 'staging' is allowed."
+              fi
               ;;
+
             main)
-              ALLOWED_FROM=("staging")
+              # Only staging -> main
+              if [[ "$HEAD" != "staging" ]]; then
+                allowed="false"; reason="Only 'staging' → 'main' is allowed."
+              fi
               ;;
+
             *)
-              echo "Base branch $BASE is not governed by this policy. Passing."
-              exit 0
+              # Branch not governed—pass
+              allowed="true"
               ;;
           esac
 
-          # Allow same-branch PRs to catch mistakes explicitly
-          if [ "$HEAD" = "$BASE" ]; then
-            echo "Head equals base ($HEAD) — likely an accidental PR. Failing."
-            echo "allowed=false" >> $GITHUB_OUTPUT
-            exit 1
+          # Block obvious mistake: head == base
+          if [[ "$HEAD" == "$BASE" ]]; then
+            allowed="false"; reason="Head equals base ('$HEAD'). Likely an accidental PR."
           fi
 
-          # Check if HEAD is in the allowed list
-          for B in "${ALLOWED_FROM[@]}"; do
-            if [ "$HEAD" = "$B" ]; then
-              echo "allowed=true" >> $GITHUB_OUTPUT
-              echo "Promotion allowed: $HEAD → $BASE"
-              exit 0
-            fi
-          done
-
-          echo "allowed=false" >> $GITHUB_OUTPUT
-          echo "❌ Disallowed promotion path: $HEAD → $BASE"
-          echo "Allowed paths:"
-          echo "  - development → test/testing"
-          echo "  - test/testing → staging"
-          echo "  - staging → main"
-          exit 1
+          echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
+          if [[ "$allowed" != "true" ]]; then
+            echo "❌ Disallowed promotion path: $HEAD → $BASE"
+            [[ -n "$reason" ]] && echo "Reason: $reason"
+            exit 1
+          fi
 
       - name: Comment when blocked
         if: steps.check.outputs.allowed == 'false'
@@ -74,9 +112,11 @@ jobs:
             🚫 This PR violates the promotion order.
 
             **Requested:** `${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}`
+
             **Allowed paths:**
+            - `feature/* → development`
             - `development → test` (or `testing`)
             - `test/testing → staging`
             - `staging → main`
 
-            Please retarget your PR accordingly.
+            If your branch is a feature, please use one of the allowed prefixes (e.g., `feature/…`, `bugfix/…`, `hotfix/…`).
