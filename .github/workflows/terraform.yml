@@ -3,12 +3,12 @@ name: Terraform
 on:
   pull_request:
     paths:
-      - 'terraform/ec2-demo/**.tf'
+      - 'terraform/ec2-demo/**/*.tf'
       - '.github/workflows/terraform.yml'
   push:
     branches: [ main ]
     paths:
-      - 'terraform/ec2-demo/**.tf'
+      - 'terraform/ec2-demo/**/*.tf'
 
 permissions:
   id-token: write   # for OIDC
@@ -16,14 +16,12 @@ permissions:
 
 env:
   WORKDIR: terraform/ec2-demo
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
-  AWS_ROLE_NAME: ${{ vars.AWS_ROLE_NAME }}
 
 jobs:
   plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
+    environment: prod            # <-- so environment variables are available
     defaults:
       run:
         working-directory: ${{ env.WORKDIR }}
@@ -37,14 +35,14 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.AWS_ROLE_NAME }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Terraform Init
         run: terraform init -input=false
 
-      - name: Terraform Format
-        run: terraform fmt -check -recursive
+      - name: Terraform Format (check)
+        run: terraform fmt -check -diff -recursive
 
       - name: Terraform Validate
         run: terraform validate
@@ -63,7 +61,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: plan
-    environment: prod   # requires manual approval if you set it
+    environment: prod
     concurrency:
       group: terraform-prod
       cancel-in-progress: false
@@ -80,8 +78,8 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.AWS_ROLE_NAME }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Terraform Init
         run: terraform init -input=false
@@ -94,3 +92,6 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Show outputs
+        run: terraform output -json
