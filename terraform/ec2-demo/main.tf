@@ -11,13 +11,23 @@ provider "aws" {
   region = "eu-central-1"
 }
 
-# S3-Bucket für das Terraform-Demo
-resource "aws_s3_bucket" "demo" {
+# Environments, shared project prefix
+locals {
+  project      = "terraform-iproba10-demo"
+  environments = ["development", "test", "staging", "production"]
+}
+
+# S3-Buckets für alle Umgebungen
+resource "aws_s3_bucket" "env_bucket" {
+  # creates one bucket per environment
+  for_each = toset(local.environments)
+
   # Name muss global einzigartig sein!
-  bucket = "terraform-iproba10-demo-bucket"
+  bucket = "${local.project}-${each.key}-bucket"
 
   tags = {
-    Purpose = "terraform-demo"
+    Purpose     = "terraform-demo"
+    Environment = each.key
   }
 }
 
@@ -54,9 +64,10 @@ resource "aws_instance" "web_server" {
   }
 }
 
-# (Optional, aber nett für die Demo) Outputs
-output "bucket_name" {
-  value = aws_s3_bucket.demo.bucket
+# Outputs
+# Zeigt alle Bucket-Namen nach Umgebung
+output "bucket_names" {
+  value = { for env, b in aws_s3_bucket.env_bucket : env => b.bucket }
 }
 
 output "web_server_public_ip" {
