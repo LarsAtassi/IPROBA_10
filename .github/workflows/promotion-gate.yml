@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, edited]
     branches:
-      - main
+      - production
       - staging
       - test
       - testing
@@ -41,7 +41,7 @@ jobs:
             return 1
           }
 
-          PROTECTED=("main" "staging" "test" "testing" "development")
+          PROTECTED=("production" "staging" "test" "testing" "development")
           FEATURE_PREFIXES=("feature/" "bugfix/" "hotfix/" "fix/" "chore/" "refactor/" "feat/" "task/" "dependabot/")
 
           # Default: pass unless we set allowed=false explicitly
@@ -79,10 +79,10 @@ jobs:
               fi
               ;;
 
-            main)
-              # Only staging -> main
+            production)
+              # Only staging -> production
               if [[ "$HEAD" != "staging" ]]; then
-                allowed="false"; reason="Only 'staging' → 'main' is allowed."
+                allowed="false"; reason="Only 'staging' → 'production' is allowed."
               fi
               ;;
 
@@ -117,6 +117,6 @@ jobs:
             - `feature/* → development`
             - `development → test` (or `testing`)
             - `test/testing → staging`
-            - `staging → main`
+            - `staging → production`
 
             If your branch is a feature, please use one of the allowed prefixes (e.g., `feature/…`, `bugfix/…`, `hotfix/…`).
