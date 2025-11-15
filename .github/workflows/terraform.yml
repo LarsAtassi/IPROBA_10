@@ -1,97 +1,97 @@
-name: Terraform
+#name: Terraform
 
-on:
-  pull_request:
-    paths:
-      - 'terraform/ec2-demo/**/*.tf'
-      - '.github/workflows/terraform.yml'
-  push:
-    branches: [ main ]
-    paths:
-      - 'terraform/ec2-demo/**/*.tf'
+#on:
+  #pull_request:
+  #  paths:
+  #    - 'terraform/ec2-demo/**/*.tf'
+  #    - '.github/workflows/terraform.yml'
+ # push:
+  #  branches: [ main ]
+  #  paths:
+   #   - 'terraform/ec2-demo/**/*.tf'
 
-permissions:
-  id-token: write   # for OIDC
-  contents: read
+#permissions:
+#  id-token: write   # for OIDC
+#  contents: read
 
-env:
-  WORKDIR: terraform/ec2-demo
+#env:
+ # WORKDIR: terraform/ec2-demo
 
-jobs:
-  plan:
-    name: Terraform Plan
-    runs-on: ubuntu-latest
-    environment: prod            # <-- so environment variables are available
-    defaults:
-      run:
-        working-directory: ${{ env.WORKDIR }}
-    steps:
-      - uses: actions/checkout@v4
+#jobs:
+ # plan:
+ #   name: Terraform Plan
+ #   runs-on: ubuntu-latest
+ #   environment: prod            # <-- so environment variables are available
+ #   defaults:
+ #     run:
+  #      working-directory: ${{ env.WORKDIR }}
+#    steps:
+    #  - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.9.5
+     # - uses: hashicorp/setup-terraform@v3
+     #   with:
+     #     terraform_version: 1.9.5
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
-          aws-region: ${{ vars.AWS_REGION }}
+    #  - name: Configure AWS credentials (OIDC)
+   #     uses: aws-actions/configure-aws-credentials@v4
+    #    with:
+    #      role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
+    #      aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Terraform Init
-        run: terraform init -input=false
+   #   - name: Terraform Init
+    #    run: terraform init -input=false
 
-      - name: Terraform Format (check)
-        run: terraform fmt -check -diff -recursive
+    #  - name: Terraform Format (check)
+    #    run: terraform fmt -check -diff -recursive
 
-      - name: Terraform Validate
-        run: terraform validate
+    #  - name: Terraform Validate
+    #    run: terraform validate
 
-      - name: Terraform Plan
-        run: terraform plan -input=false -out=tfplan
+    #  - name: Terraform Plan
+    #    run: terraform plan -input=false -out=tfplan
 
-      - name: Save Plan Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: ${{ env.WORKDIR }}/tfplan
+    #  - name: Save Plan Artifact
+     #   uses: actions/upload-artifact@v4
+     #   with:
+     #     name: tfplan
+     #     path: ${{ env.WORKDIR }}/tfplan
 
-  apply:
-    name: Terraform Apply (main)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    needs: plan
-    environment: prod
-    concurrency:
-      group: terraform-prod
-      cancel-in-progress: false
-    defaults:
-      run:
-        working-directory: ${{ env.WORKDIR }}
-    steps:
-      - uses: actions/checkout@v4
+  #apply:
+   # name: Terraform Apply (main)
+   # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+   # runs-on: ubuntu-latest
+   # needs: plan
+  #  environment: prod
+   # concurrency:
+  #    group: terraform-prod
+   #   cancel-in-progress: false
+   # defaults:
+    #  run:
+  #      working-directory: ${{ env.WORKDIR }}
+   # steps:
+   #   - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.9.5
+    #  - uses: hashicorp/setup-terraform@v3
+    #    with:
+    #      terraform_version: 1.9.5
+#
+   #   - name: Configure AWS credentials (OIDC)
+   #     uses: aws-actions/configure-aws-credentials@v4
+    #    with:
+   #       role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
+     #     aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
-          aws-region: ${{ vars.AWS_REGION }}
+   #   - name: Terraform Init
+   #     run: terraform init -input=false
 
-      - name: Terraform Init
-        run: terraform init -input=false
+    #  - name: Download Plan Artifact
+   #     uses: actions/download-artifact@v4
+    #    with:
+    #      name: tfplan
+    #      path: ${{ env.WORKDIR }}
 
-      - name: Download Plan Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan
-          path: ${{ env.WORKDIR }}
+    #  - name: Terraform Apply
+   #     run: terraform apply -input=false -auto-approve tfplan
 
-      - name: Terraform Apply
-        run: terraform apply -input=false -auto-approve tfplan
-
-      - name: Show outputs
-        run: terraform output -json
+   #   - name: Show outputs
+   #     run: terraform output -json
